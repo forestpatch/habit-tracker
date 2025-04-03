@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="A private, offline-first habit tracker for building consistent routines." />
+    <title>Habit Garden</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <a class="brand" href="#" aria-label="Habit Garden home">
+          <span class="brand-mark" aria-hidden="true">✓</span>
+          <span>Habit Garden</span>
+        </a>
+        <div class="topbar-actions">
+          <p class="today-label" id="today-label"></p>
+          <button class="icon-button" id="theme-toggle" type="button" aria-label="Toggle color theme">☾</button>
+        </div>
+      </header>
+
+      <main>
+        <section class="hero" aria-labelledby="page-title">
+          <div>
+            <p class="eyebrow">Small steps, lasting change</p>
+            <h1 id="page-title">Make today count.</h1>
+            <p class="hero-copy">Track the routines that matter and keep your momentum visible.</p>
+          </div>
+          <button class="primary-button" id="new-habit-button" type="button">
+            <span aria-hidden="true">＋</span> New habit
+          </button>
+        </section>
+
+        <section class="summary-grid" aria-label="Habit summary">
+          <article class="summary-card summary-primary">
+            <span class="summary-icon" aria-hidden="true">✓</span>
+            <div>
+              <p>Completed today</p>
+              <strong><span id="completed-count">0</span>/<span id="habit-count">0</span></strong>
+            </div>
+          </article>
+          <article class="summary-card">
+            <span class="summary-icon flame" aria-hidden="true">◆</span>
+            <div>
+              <p>Best active streak</p>
+              <strong><span id="best-streak">0</span> days</strong>
+            </div>
+          </article>
+          <article class="summary-card">
+            <span class="summary-icon chart" aria-hidden="true">↗</span>
+            <div>
+              <p>Weekly consistency</p>
+              <strong><span id="weekly-rate">0</span>%</strong>
+            </div>
+          </article>
+        </section>
+
+        <section class="content-grid">
+          <div class="habits-panel">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">Your routines</p>
+                <h2>Today’s habits</h2>
+              </div>
+              <div class="panel-actions">
+                <div class="filter-group" role="group" aria-label="Filter habits">
+                  <button class="filter-button active" type="button" data-filter="all">All</button>
+                  <button class="filter-button" type="button" data-filter="pending">Pending</button>
+                  <button class="filter-button" type="button" data-filter="done">Done</button>
+                </div>
+                <button class="secondary-button" id="export-button" type="button">Export</button>
+              </div>
+            </div>
+
+            <div class="habit-list" id="habit-list" aria-live="polite"></div>
+            <div class="empty-state" id="empty-state" hidden>
+              <span aria-hidden="true">✦</span>
+              <h3>No habits here yet</h3>
+              <p>Add a habit or change the current filter.</p>
+            </div>
+          </div>
+
+          <aside class="week-panel" aria-labelledby="week-title">
+            <div class="section-heading compact">
+              <div>
+                <p class="eyebrow">This week</p>
+                <h2 id="week-title">Progress</h2>
+              </div>
+              <strong class="week-score" id="week-score">0%</strong>
+            </div>
+            <div class="week-bars" id="week-bars"></div>
+            <div class="week-insight" id="week-insight">
+              <span aria-hidden="true">◎</span>
+              <p>Complete a habit to start building your weekly rhythm.</p>
+            </div>
+          </aside>
+        </section>
+      </main>
+
+      <footer>
+        <p>Your progress stays in this browser.</p>
+        <button class="text-button" id="clear-data-button" type="button">Reset data</button>
+      </footer>
+    </div>
+
+    <dialog id="habit-dialog">
+      <form id="habit-form" method="dialog">
+        <div class="dialog-heading">
+          <div>
+            <p class="eyebrow">Build a routine</p>
+            <h2 id="dialog-title">Add a new habit</h2>
+          </div>
+          <button class="icon-button" id="close-dialog-button" type="button" aria-label="Close dialog">×</button>
+        </div>
+
+        <input id="habit-id" type="hidden" />
+        <label>
+          Habit name
+          <input id="habit-name" name="habit-name" type="text" maxlength="48" placeholder="e.g. Read for 20 minutes" required />
+        </label>
+        <label>
+          Schedule
+          <select id="habit-schedule" name="habit-schedule">
+            <option value="daily">Every day</option>
+            <option value="weekdays">Weekdays</option>
+            <option value="weekends">Weekends</option>
+          </select>
+        </label>
+        <fieldset>
+          <legend>Color</legend>
+          <div class="color-options">
+            <label><input type="radio" name="habit-color" value="violet" checked /><span class="color-dot violet"></span><span class="sr-only">Violet</span></label>
+            <label><input type="radio" name="habit-color" value="emerald" /><span class="color-dot emerald"></span><span class="sr-only">Emerald</span></label>
+            <label><input type="radio" name="habit-color" value="amber" /><span class="color-dot amber"></span><span class="sr-only">Amber</span></label>
+            <label><input type="radio" name="habit-color" value="rose" /><span class="color-dot rose"></span><span class="sr-only">Rose</span></label>
+            <label><input type="radio" name="habit-color" value="sky" /><span class="color-dot sky"></span><span class="sr-only">Sky</span></label>
+          </div>
+        </fieldset>
+
+        <div class="dialog-actions">
+          <button class="secondary-button" id="cancel-dialog-button" type="button">Cancel</button>
+          <button class="primary-button" type="submit">Save habit</button>
+        </div>
+      </form>
+    </dialog>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script src="app.js"></script>
+  </body>
+</html>
