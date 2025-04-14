@@ -329,6 +329,11 @@ h2 {
   background: color-mix(in srgb, var(--habit-color) 4%, var(--surface));
 }
 
+.habit-card.completed .habit-title-row h3 {
+  color: var(--text-muted);
+  text-decoration: line-through;
+}
+
 .complete-button {
   display: grid;
   width: 38px;
@@ -391,7 +396,12 @@ h2 {
   position: relative;
 }
 
+.habit-menu[open] {
+  z-index: 2;
+}
+
 .more-button {
+  display: grid;
   width: 36px;
   height: 36px;
   padding: 0;
@@ -400,10 +410,47 @@ h2 {
   background: transparent;
   border: 0;
   border-radius: 10px;
+  list-style: none;
+  place-items: center;
+}
+
+.more-button::-webkit-details-marker {
+  display: none;
 }
 
 .more-button:hover {
   background: var(--surface-muted);
+}
+
+.menu-popover {
+  position: absolute;
+  top: 40px;
+  right: 0;
+  display: grid;
+  min-width: 125px;
+  padding: 6px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 14px 35px rgb(25 24 40 / 16%);
+}
+
+.menu-popover button {
+  padding: 9px 10px;
+  color: var(--text);
+  cursor: pointer;
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+  text-align: left;
+}
+
+.menu-popover button:hover {
+  background: var(--surface-muted);
+}
+
+.menu-popover .danger-action {
+  color: #d54867;
 }
 
 .empty-state {

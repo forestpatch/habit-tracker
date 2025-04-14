@@ -1,9 +1,4 @@
-const habits = [
-  { id: "move", name: "Move for 30 minutes", schedule: "daily", color: "emerald", done: false },
-  { id: "read", name: "Read ten pages", schedule: "daily", color: "violet", done: true },
-  { id: "plan", name: "Plan tomorrow", schedule: "weekdays", color: "amber", done: false },
-];
-
+const STORAGE_KEY = "habit-garden:v1";
 const colorMap = {
   violet: "#6d5dfc",
   emerald: "#20a779",
@@ -12,9 +7,35 @@ const colorMap = {
   sky: "#3a9bdc",
 };
 
-const habitList = document.querySelector("#habit-list");
-const dialog = document.querySelector("#habit-dialog");
-const habitForm = document.querySelector("#habit-form");
+const scheduleLabels = {
+  daily: "Every day",
+  weekdays: "Weekdays",
+  weekends: "Weekends",
+};
+
+const elements = {
+  habitList: document.querySelector("#habit-list"),
+  emptyState: document.querySelector("#empty-state"),
+  dialog: document.querySelector("#habit-dialog"),
+  dialogTitle: document.querySelector("#dialog-title"),
+  habitForm: document.querySelector("#habit-form"),
+  habitId: document.querySelector("#habit-id"),
+  habitName: document.querySelector("#habit-name"),
+  habitSchedule: document.querySelector("#habit-schedule"),
+  completedCount: document.querySelector("#completed-count"),
+  habitCount: document.querySelector("#habit-count"),
+  bestStreak: document.querySelector("#best-streak"),
+  weeklyRate: document.querySelector("#weekly-rate"),
+  weekScore: document.querySelector("#week-score"),
+  weekBars: document.querySelector("#week-bars"),
+  weekInsight: document.querySelector("#week-insight"),
+  toast: document.querySelector("#toast"),
+};
+
+const state = {
+  habits: loadHabits(),
+  filter: "all",
+};
 
 document.querySelector("#today-label").textContent = new Intl.DateTimeFormat("en", {
   weekday: "long",
@@ -22,73 +43,312 @@ document.querySelector("#today-label").textContent = new Intl.DateTimeFormat("en
   day: "numeric",
 }).format(new Date());
 
-document.querySelector("#new-habit-button").addEventListener("click", () => dialog.showModal());
-document.querySelector("#close-dialog-button").addEventListener("click", () => dialog.close());
-document.querySelector("#cancel-dialog-button").addEventListener("click", () => dialog.close());
+document.querySelector("#new-habit-button").addEventListener("click", () => openHabitDialog());
+document.querySelector("#close-dialog-button").addEventListener("click", closeHabitDialog);
+document.querySelector("#cancel-dialog-button").addEventListener("click", closeHabitDialog);
+document.querySelector("#clear-data-button").addEventListener("click", resetData);
 
-habitForm.addEventListener("submit", (event) => {
+document.querySelectorAll("[data-filter]").forEach((button) => {
+  button.addEventListener("click", () => {
+    state.filter = button.dataset.filter;
+    document.querySelectorAll("[data-filter]").forEach((item) => item.classList.toggle("active", item === button));
+    render();
+  });
+});
+
+elements.habitForm.addEventListener("submit", saveHabitFromForm);
+elements.habitList.addEventListener("click", handleHabitAction);
+
+function loadHabits() {
+  try {
+    const stored = JSON.parse(localStorage.getItem(STORAGE_KEY));
+    if (Array.isArray(stored)) return stored;
+  } catch (error) {
+    console.warn("Habit data could not be loaded.", error);
+  }
+  return createStarterHabits();
+}
+
+function createStarterHabits() {
+  const dates = getPastDates(8).map(toDateKey);
+  return [
+    {
+      id: createId(),
+      name: "Move for 30 minutes",
+      schedule: "daily",
+      color: "emerald",
+      createdAt: dates[7],
+      history: Object.fromEntries([dates[1], dates[2], dates[3], dates[4], dates[5]].map((date) => [date, true])),
+    },
+    {
+      id: createId(),
+      name: "Read ten pages",
+      schedule: "daily",
+      color: "violet",
+      createdAt: dates[7],
+      history: Object.fromEntries([dates[0], dates[2], dates[3], dates[5], dates[6]].map((date) => [date, true])),
+    },
+    {
+      id: createId(),
+      name: "Plan tomorrow",
+      schedule: "weekdays",
+      color: "amber",
+      createdAt: dates[7],
+      history: Object.fromEntries([dates[2], dates[3], dates[4]].map((date) => [date, true])),
+    },
+  ];
+}
+
+function saveHabits() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state.habits));
+}
+
+function handleHabitAction(event) {
+  const actionButton = event.target.closest("button[data-action]");
+  if (!actionButton) return;
+
+  const habit = state.habits.find((item) => item.id === actionButton.dataset.id);
+  if (!habit) return;
+
+  if (actionButton.dataset.action === "toggle") toggleHabit(habit);
+  if (actionButton.dataset.action === "edit") openHabitDialog(habit);
+  if (actionButton.dataset.action === "delete") deleteHabit(habit);
+}
+
+function toggleHabit(habit) {
+  const today = toDateKey(new Date());
+  if (habit.history[today]) {
+    delete habit.history[today];
+    showToast("Completion removed");
+  } else {
+    habit.history[today] = true;
+    showToast("Nice work — habit completed!");
+  }
+  saveHabits();
+  render();
+}
+
+function openHabitDialog(habit = null) {
+  elements.habitForm.reset();
+  elements.habitId.value = habit?.id ?? "";
+  elements.dialogTitle.textContent = habit ? "Edit habit" : "Add a new habit";
+
+  if (habit) {
+    elements.habitName.value = habit.name;
+    elements.habitSchedule.value = habit.schedule;
+    const colorInput = elements.habitForm.querySelector(`[name="habit-color"][value="${habit.color}"]`);
+    if (colorInput) colorInput.checked = true;
+  }
+
+  elements.dialog.showModal();
+  requestAnimationFrame(() => elements.habitName.focus());
+}
+
+function closeHabitDialog() {
+  elements.dialog.close();
+  elements.habitForm.reset();
+}
+
+function saveHabitFromForm(event) {
   event.preventDefault();
-  const name = document.querySelector("#habit-name").value.trim();
+  const name = elements.habitName.value.trim();
   if (!name) return;
 
-  habits.push({
-    id: crypto.randomUUID(),
+  const id = elements.habitId.value;
+  const existingHabit = state.habits.find((habit) => habit.id === id);
+  const details = {
     name,
-    schedule: document.querySelector("#habit-schedule").value,
-    color: new FormData(habitForm).get("habit-color"),
-    done: false,
-  });
+    schedule: elements.habitSchedule.value,
+    color: new FormData(elements.habitForm).get("habit-color"),
+  };
 
-  habitForm.reset();
-  dialog.close();
-  render();
-});
+  if (existingHabit) {
+    Object.assign(existingHabit, details);
+    showToast("Habit updated");
+  } else {
+    state.habits.push({
+      id: createId(),
+      ...details,
+      createdAt: toDateKey(new Date()),
+      history: {},
+    });
+    showToast("New habit added");
+  }
 
-habitList.addEventListener("click", (event) => {
-  const button = event.target.closest("[data-complete]");
-  if (!button) return;
-  const habit = habits.find((item) => item.id === button.dataset.complete);
-  habit.done = !habit.done;
+  saveHabits();
+  closeHabitDialog();
   render();
-});
+}
+
+function deleteHabit(habit) {
+  if (!window.confirm(`Delete “${habit.name}” and its history?`)) return;
+  state.habits = state.habits.filter((item) => item.id !== habit.id);
+  saveHabits();
+  showToast("Habit deleted");
+  render();
+}
+
+function resetData() {
+  if (!window.confirm("Reset every habit and completion? This cannot be undone.")) return;
+  state.habits = [];
+  saveHabits();
+  showToast("Habit data reset");
+  render();
+}
 
 function render() {
-  habitList.innerHTML = habits.map((habit) => `
-    <article class="habit-card ${habit.done ? "completed" : ""}" style="--habit-color: ${colorMap[habit.color]}">
-      <button class="complete-button" data-complete="${habit.id}" type="button" aria-label="Toggle ${escapeHtml(habit.name)}">✓</button>
+  const today = new Date();
+  const todayKey = toDateKey(today);
+  const scheduledHabits = state.habits.filter((habit) => isScheduled(habit, today));
+  const visibleHabits = scheduledHabits.filter((habit) => {
+    const complete = Boolean(habit.history[todayKey]);
+    if (state.filter === "pending") return !complete;
+    if (state.filter === "done") return complete;
+    return true;
+  });
+
+  elements.habitList.innerHTML = visibleHabits.map((habit) => habitCardTemplate(habit, todayKey)).join("");
+  elements.emptyState.hidden = visibleHabits.length > 0;
+
+  const completed = scheduledHabits.filter((habit) => habit.history[todayKey]).length;
+  elements.completedCount.textContent = completed;
+  elements.habitCount.textContent = scheduledHabits.length;
+  elements.bestStreak.textContent = Math.max(0, ...state.habits.map(calculateStreak));
+
+  renderWeeklyProgress();
+}
+
+function habitCardTemplate(habit, todayKey) {
+  const complete = Boolean(habit.history[todayKey]);
+  const streak = calculateStreak(habit);
+  const total = Object.keys(habit.history).length;
+  return `
+    <article class="habit-card ${complete ? "completed" : ""}" style="--habit-color: ${colorMap[habit.color]}">
+      <button class="complete-button" data-action="toggle" data-id="${habit.id}" type="button" aria-label="${complete ? "Mark incomplete" : "Mark complete"}: ${escapeHtml(habit.name)}">✓</button>
       <div class="habit-main">
         <div class="habit-title-row">
           <h3>${escapeHtml(habit.name)}</h3>
-          <span class="schedule-badge">${habit.schedule}</span>
+          <span class="schedule-badge">${scheduleLabels[habit.schedule]}</span>
         </div>
-        <div class="habit-meta"><span><strong>${habit.done ? 1 : 0}</strong> today</span><span>New habit</span></div>
+        <div class="habit-meta">
+          <span><strong>${streak}</strong> day streak</span>
+          <span><strong>${total}</strong> completions</span>
+        </div>
       </div>
-      <div class="habit-menu"><button class="more-button" type="button" aria-label="Habit options">•••</button></div>
+      <details class="habit-menu">
+        <summary class="more-button" aria-label="Options for ${escapeHtml(habit.name)}">•••</summary>
+        <div class="menu-popover">
+          <button data-action="edit" data-id="${habit.id}" type="button">Edit</button>
+          <button class="danger-action" data-action="delete" data-id="${habit.id}" type="button">Delete</button>
+        </div>
+      </details>
     </article>
-  `).join("");
-
-  const completed = habits.filter((habit) => habit.done).length;
-  document.querySelector("#completed-count").textContent = completed;
-  document.querySelector("#habit-count").textContent = habits.length;
-  renderWeek(completed);
+  `;
 }
 
-function renderWeek(completed) {
-  const score = habits.length ? Math.round((completed / habits.length) * 100) : 0;
-  document.querySelector("#week-score").textContent = `${score}%`;
-  document.querySelector("#weekly-rate").textContent = score;
-  document.querySelector("#week-bars").innerHTML = [18, 42, 34, 65, 48, 28, score].map((value, index) => `
-    <div class="day-column ${index === 6 ? "today" : ""}">
-      <div class="day-track"><div class="day-fill" style="height: ${Math.max(5, value)}%"></div></div>
-      <span>${["M", "T", "W", "T", "F", "S", "S"][index]}</span>
+function renderWeeklyProgress() {
+  const weekDates = getCurrentWeekDates();
+  const dayRates = weekDates.map((date) => {
+    const scheduled = state.habits.filter((habit) => isScheduled(habit, date));
+    const complete = scheduled.filter((habit) => habit.history[toDateKey(date)]).length;
+    return scheduled.length ? Math.round((complete / scheduled.length) * 100) : 0;
+  });
+
+  const opportunities = weekDates.reduce((total, date) => total + state.habits.filter((habit) => isScheduled(habit, date)).length, 0);
+  const completions = weekDates.reduce((total, date) => {
+    const dateKey = toDateKey(date);
+    return total + state.habits.filter((habit) => isScheduled(habit, date) && habit.history[dateKey]).length;
+  }, 0);
+  const rate = opportunities ? Math.round((completions / opportunities) * 100) : 0;
+
+  elements.weeklyRate.textContent = rate;
+  elements.weekScore.textContent = `${rate}%`;
+  elements.weekBars.innerHTML = weekDates.map((date, index) => `
+    <div class="day-column ${toDateKey(date) === toDateKey(new Date()) ? "today" : ""}" title="${dayRates[index]}% complete">
+      <div class="day-track"><div class="day-fill" style="height: ${Math.max(5, dayRates[index])}%"></div></div>
+      <span>${new Intl.DateTimeFormat("en", { weekday: "narrow" }).format(date)}</span>
     </div>
   `).join("");
+
+  const insight = rate >= 80
+    ? "Excellent rhythm — you are on track for a strong week."
+    : rate >= 50
+      ? "Good momentum. One more completion will keep the week moving."
+      : "Start small today. A single completion is still progress.";
+  elements.weekInsight.innerHTML = `<span aria-hidden="true">◎</span><p>${insight}</p>`;
+}
+
+function calculateStreak(habit) {
+  let cursor = startOfDay(new Date());
+  if (!habit.history[toDateKey(cursor)]) cursor = addDays(cursor, -1);
+  let streak = 0;
+  let guard = 0;
+
+  while (guard < 730) {
+    guard += 1;
+    if (!isScheduled(habit, cursor)) {
+      cursor = addDays(cursor, -1);
+      continue;
+    }
+    if (!habit.history[toDateKey(cursor)]) break;
+    streak += 1;
+    cursor = addDays(cursor, -1);
+  }
+  return streak;
+}
+
+function isScheduled(habit, date) {
+  const day = date.getDay();
+  if (habit.schedule === "weekdays") return day >= 1 && day <= 5;
+  if (habit.schedule === "weekends") return day === 0 || day === 6;
+  return true;
+}
+
+function getCurrentWeekDates() {
+  const today = startOfDay(new Date());
+  const mondayOffset = today.getDay() === 0 ? -6 : 1 - today.getDay();
+  const monday = addDays(today, mondayOffset);
+  return Array.from({ length: 7 }, (_, index) => addDays(monday, index));
+}
+
+function getPastDates(count) {
+  const today = startOfDay(new Date());
+  return Array.from({ length: count }, (_, index) => addDays(today, -index));
+}
+
+function startOfDay(date) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
+function addDays(date, amount) {
+  const result = new Date(date);
+  result.setDate(result.getDate() + amount);
+  return result;
+}
+
+function toDateKey(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function createId() {
+  return globalThis.crypto?.randomUUID?.() ?? `habit-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
 function escapeHtml(value) {
   const node = document.createElement("div");
   node.textContent = value;
   return node.innerHTML;
+}
+
+let toastTimer;
+function showToast(message) {
+  clearTimeout(toastTimer);
+  elements.toast.textContent = message;
+  elements.toast.classList.add("show");
+  toastTimer = setTimeout(() => elements.toast.classList.remove("show"), 2200);
 }
 
 render();
