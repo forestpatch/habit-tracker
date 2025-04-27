@@ -1,4 +1,5 @@
 const STORAGE_KEY = "habit-garden:v1";
+const THEME_KEY = "habit-garden:theme";
 const colorMap = {
   violet: "#6d5dfc",
   emerald: "#20a779",
@@ -37,6 +38,10 @@ const state = {
   filter: "all",
 };
 
+if (!localStorage.getItem(STORAGE_KEY)) saveHabits();
+
+applyTheme(loadTheme());
+
 document.querySelector("#today-label").textContent = new Intl.DateTimeFormat("en", {
   weekday: "long",
   month: "long",
@@ -47,6 +52,8 @@ document.querySelector("#new-habit-button").addEventListener("click", () => open
 document.querySelector("#close-dialog-button").addEventListener("click", closeHabitDialog);
 document.querySelector("#cancel-dialog-button").addEventListener("click", closeHabitDialog);
 document.querySelector("#clear-data-button").addEventListener("click", resetData);
+document.querySelector("#theme-toggle").addEventListener("click", toggleTheme);
+document.querySelector("#export-button").addEventListener("click", exportData);
 
 document.querySelectorAll("[data-filter]").forEach((button) => {
   button.addEventListener("click", () => {
@@ -196,6 +203,43 @@ function resetData() {
   render();
 }
 
+function loadTheme() {
+  const savedTheme = localStorage.getItem(THEME_KEY);
+  if (savedTheme === "light" || savedTheme === "dark") return savedTheme;
+  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+}
+
+function toggleTheme() {
+  const nextTheme = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+  localStorage.setItem(THEME_KEY, nextTheme);
+  applyTheme(nextTheme);
+}
+
+function applyTheme(theme) {
+  const toggle = document.querySelector("#theme-toggle");
+  document.documentElement.dataset.theme = theme;
+  document.documentElement.style.colorScheme = theme;
+  toggle.textContent = theme === "dark" ? "☀" : "☾";
+  toggle.setAttribute("aria-label", `Switch to ${theme === "dark" ? "light" : "dark"} theme`);
+}
+
+function exportData() {
+  const exportPayload = {
+    application: "Habit Garden",
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    habits: state.habits,
+  };
+  const blob = new Blob([JSON.stringify(exportPayload, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `habit-garden-${toDateKey(new Date())}.json`;
+  link.click();
+  window.setTimeout(() => URL.revokeObjectURL(url), 0);
+  showToast("Habit data exported");
+}
+
 function render() {
   const today = new Date();
   const todayKey = toDateKey(today);
@@ -248,14 +292,16 @@ function habitCardTemplate(habit, todayKey) {
 
 function renderWeeklyProgress() {
   const weekDates = getCurrentWeekDates();
+  const today = toDateKey(new Date());
+  const elapsedWeekDates = weekDates.filter((date) => toDateKey(date) <= today);
   const dayRates = weekDates.map((date) => {
     const scheduled = state.habits.filter((habit) => isScheduled(habit, date));
     const complete = scheduled.filter((habit) => habit.history[toDateKey(date)]).length;
     return scheduled.length ? Math.round((complete / scheduled.length) * 100) : 0;
   });
 
-  const opportunities = weekDates.reduce((total, date) => total + state.habits.filter((habit) => isScheduled(habit, date)).length, 0);
-  const completions = weekDates.reduce((total, date) => {
+  const opportunities = elapsedWeekDates.reduce((total, date) => total + state.habits.filter((habit) => isScheduled(habit, date)).length, 0);
+  const completions = elapsedWeekDates.reduce((total, date) => {
     const dateKey = toDateKey(date);
     return total + state.habits.filter((habit) => isScheduled(habit, date) && habit.history[dateKey]).length;
   }, 0);
