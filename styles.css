@@ -318,6 +318,11 @@ h2 {
   gap: 10px;
 }
 
+.data-actions {
+  display: flex;
+  gap: 8px;
+}
+
 .filter-group {
   gap: 3px;
   padding: 4px;

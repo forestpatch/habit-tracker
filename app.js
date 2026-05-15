@@ -23,6 +23,7 @@ const elements = {
   habitId: document.querySelector("#habit-id"),
   habitName: document.querySelector("#habit-name"),
   habitSchedule: document.querySelector("#habit-schedule"),
+  importInput: document.querySelector("#import-input"),
   completedCount: document.querySelector("#completed-count"),
   habitCount: document.querySelector("#habit-count"),
   bestStreak: document.querySelector("#best-streak"),
@@ -54,6 +55,8 @@ document.querySelector("#cancel-dialog-button").addEventListener("click", closeH
 document.querySelector("#clear-data-button").addEventListener("click", resetData);
 document.querySelector("#theme-toggle").addEventListener("click", toggleTheme);
 document.querySelector("#export-button").addEventListener("click", exportData);
+document.querySelector("#import-button").addEventListener("click", () => elements.importInput.click());
+elements.importInput.addEventListener("change", importData);
 
 document.querySelectorAll("[data-filter]").forEach((button) => {
   button.addEventListener("click", () => {
@@ -238,6 +241,50 @@ function exportData() {
   link.click();
   window.setTimeout(() => URL.revokeObjectURL(url), 0);
   showToast("Habit data exported");
+}
+
+async function importData(event) {
+  const [file] = event.target.files;
+  if (!file) return;
+
+  try {
+    const payload = JSON.parse(await file.text());
+    const importedHabits = normalizeImportedHabits(payload?.habits);
+    if (!window.confirm(`Replace current data with ${importedHabits.length} imported habits?`)) return;
+    state.habits = importedHabits;
+    saveHabits();
+    render();
+    showToast("Habit data imported");
+  } catch (error) {
+    console.warn("Habit data could not be imported.", error);
+    showToast("That backup file is not valid");
+  } finally {
+    event.target.value = "";
+  }
+}
+
+function normalizeImportedHabits(habits) {
+  if (!Array.isArray(habits)) throw new TypeError("The backup does not contain a habits array.");
+
+  return habits.map((habit) => {
+    const name = typeof habit?.name === "string" ? habit.name.trim().slice(0, 48) : "";
+    if (!name) throw new TypeError("Every imported habit needs a name.");
+
+    const schedule = Object.hasOwn(scheduleLabels, habit.schedule) ? habit.schedule : "daily";
+    const color = Object.hasOwn(colorMap, habit.color) ? habit.color : "violet";
+    const history = Object.fromEntries(
+      Object.entries(habit.history ?? {}).filter(([date, complete]) => /^\d{4}-\d{2}-\d{2}$/.test(date) && complete === true),
+    );
+
+    return {
+      id: typeof habit.id === "string" && habit.id ? habit.id : createId(),
+      name,
+      schedule,
+      color,
+      createdAt: /^\d{4}-\d{2}-\d{2}$/.test(habit.createdAt ?? "") ? habit.createdAt : toDateKey(new Date()),
+      history,
+    };
+  });
 }
 
 function render() {

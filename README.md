@@ -10,7 +10,7 @@ A private, offline-first habit tracker for building consistent daily routines. I
 - Seven-day progress chart and weekly consistency score
 - Automatic local persistence through `localStorage`
 - Light and dark themes
-- JSON data export
+- Validated JSON backup import and export
 - Responsive and keyboard-accessible interface
 
 ## Run locally

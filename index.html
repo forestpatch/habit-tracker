@@ -69,7 +69,11 @@
                   <button class="filter-button" type="button" data-filter="pending">Pending</button>
                   <button class="filter-button" type="button" data-filter="done">Done</button>
                 </div>
-                <button class="secondary-button" id="export-button" type="button">Export</button>
+                <div class="data-actions">
+                  <button class="secondary-button" id="import-button" type="button">Import</button>
+                  <button class="secondary-button" id="export-button" type="button">Export</button>
+                  <input id="import-input" type="file" accept="application/json,.json" hidden />
+                </div>
               </div>
             </div>
 
