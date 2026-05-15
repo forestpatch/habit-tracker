@@ -23,6 +23,7 @@ const elements = {
   habitId: document.querySelector("#habit-id"),
   habitName: document.querySelector("#habit-name"),
   habitSchedule: document.querySelector("#habit-schedule"),
+  habitSearch: document.querySelector("#habit-search"),
   importInput: document.querySelector("#import-input"),
   completedCount: document.querySelector("#completed-count"),
   habitCount: document.querySelector("#habit-count"),
@@ -37,6 +38,7 @@ const elements = {
 const state = {
   habits: loadHabits(),
   filter: "all",
+  query: "",
 };
 
 if (!localStorage.getItem(STORAGE_KEY)) saveHabits();
@@ -68,6 +70,10 @@ document.querySelectorAll("[data-filter]").forEach((button) => {
 
 elements.habitForm.addEventListener("submit", saveHabitFromForm);
 elements.habitList.addEventListener("click", handleHabitAction);
+elements.habitSearch.addEventListener("input", (event) => {
+  state.query = event.target.value.trim().toLocaleLowerCase();
+  render();
+});
 
 function loadHabits() {
   try {
@@ -296,7 +302,7 @@ function render() {
     if (state.filter === "pending") return !complete;
     if (state.filter === "done") return complete;
     return true;
-  });
+  }).filter((habit) => habit.name.toLocaleLowerCase().includes(state.query));
 
   elements.habitList.innerHTML = visibleHabits.map((habit) => habitCardTemplate(habit, todayKey)).join("");
   elements.emptyState.hidden = visibleHabits.length > 0;

@@ -323,6 +323,23 @@ h2 {
   gap: 8px;
 }
 
+.search-field input {
+  width: 150px;
+  height: 38px;
+  padding: 0 12px;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  outline: none;
+}
+
+.search-field input:focus {
+  width: 190px;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-soft);
+}
+
 .filter-group {
   gap: 3px;
   padding: 4px;
@@ -795,6 +812,11 @@ fieldset {
 
   .panel-actions .secondary-button {
     display: none;
+  }
+
+  .search-field input,
+  .search-field input:focus {
+    width: 100%;
   }
 
   .filter-group {

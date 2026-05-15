@@ -4,7 +4,7 @@ A private, offline-first habit tracker for building consistent daily routines. I
 
 ## Features
 
-- Create, edit, complete, filter, and delete habits
+- Create, edit, complete, search, filter, and delete habits
 - Daily, weekday, and weekend schedules
 - Current streak and total-completion calculations
 - Seven-day progress chart and weekly consistency score
