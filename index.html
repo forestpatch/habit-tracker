@@ -68,6 +68,15 @@
                   <span class="sr-only">Search habits</span>
                   <input id="habit-search" type="search" placeholder="Search habits" autocomplete="off" />
                 </label>
+                <label class="sort-field">
+                  <span class="sr-only">Sort habits</span>
+                  <select id="habit-sort">
+                    <option value="created">Newest</option>
+                    <option value="name">Name</option>
+                    <option value="streak">Streak</option>
+                    <option value="total">Completions</option>
+                  </select>
+                </label>
                 <div class="filter-group" role="group" aria-label="Filter habits">
                   <button class="filter-button active" type="button" data-filter="all">All</button>
                   <button class="filter-button" type="button" data-filter="pending">Pending</button>

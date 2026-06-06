@@ -24,6 +24,7 @@ const elements = {
   habitName: document.querySelector("#habit-name"),
   habitSchedule: document.querySelector("#habit-schedule"),
   habitSearch: document.querySelector("#habit-search"),
+  habitSort: document.querySelector("#habit-sort"),
   importInput: document.querySelector("#import-input"),
   completedCount: document.querySelector("#completed-count"),
   habitCount: document.querySelector("#habit-count"),
@@ -39,6 +40,7 @@ const state = {
   habits: loadHabits(),
   filter: "all",
   query: "",
+  sort: "created",
 };
 
 if (!localStorage.getItem(STORAGE_KEY)) saveHabits();
@@ -72,6 +74,10 @@ elements.habitForm.addEventListener("submit", saveHabitFromForm);
 elements.habitList.addEventListener("click", handleHabitAction);
 elements.habitSearch.addEventListener("input", (event) => {
   state.query = event.target.value.trim().toLocaleLowerCase();
+  render();
+});
+elements.habitSort.addEventListener("change", (event) => {
+  state.sort = event.target.value;
   render();
 });
 
@@ -297,12 +303,13 @@ function render() {
   const today = new Date();
   const todayKey = toDateKey(today);
   const scheduledHabits = state.habits.filter((habit) => isScheduled(habit, today));
-  const visibleHabits = scheduledHabits.filter((habit) => {
+  const matchingHabits = scheduledHabits.filter((habit) => {
     const complete = Boolean(habit.history[todayKey]);
     if (state.filter === "pending") return !complete;
     if (state.filter === "done") return complete;
     return true;
   }).filter((habit) => habit.name.toLocaleLowerCase().includes(state.query));
+  const visibleHabits = sortHabits(matchingHabits);
 
   elements.habitList.innerHTML = visibleHabits.map((habit) => habitCardTemplate(habit, todayKey)).join("");
   elements.emptyState.hidden = visibleHabits.length > 0;
@@ -313,6 +320,16 @@ function render() {
   elements.bestStreak.textContent = Math.max(0, ...state.habits.map(calculateStreak));
 
   renderWeeklyProgress();
+}
+
+function sortHabits(habits) {
+  const sorted = [...habits];
+  if (state.sort === "name") return sorted.sort((left, right) => left.name.localeCompare(right.name));
+  if (state.sort === "streak") return sorted.sort((left, right) => calculateStreak(right) - calculateStreak(left));
+  if (state.sort === "total") {
+    return sorted.sort((left, right) => Object.keys(right.history).length - Object.keys(left.history).length);
+  }
+  return sorted.sort((left, right) => right.createdAt.localeCompare(left.createdAt));
 }
 
 function habitCardTemplate(habit, todayKey) {
