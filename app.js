@@ -23,6 +23,7 @@ const elements = {
   habitId: document.querySelector("#habit-id"),
   habitName: document.querySelector("#habit-name"),
   habitSchedule: document.querySelector("#habit-schedule"),
+  habitNotes: document.querySelector("#habit-notes"),
   habitSearch: document.querySelector("#habit-search"),
   habitSort: document.querySelector("#habit-sort"),
   importInput: document.querySelector("#import-input"),
@@ -158,6 +159,7 @@ function openHabitDialog(habit = null) {
   if (habit) {
     elements.habitName.value = habit.name;
     elements.habitSchedule.value = habit.schedule;
+    elements.habitNotes.value = habit.notes ?? "";
     const colorInput = elements.habitForm.querySelector(`[name="habit-color"][value="${habit.color}"]`);
     if (colorInput) colorInput.checked = true;
   }
@@ -182,6 +184,7 @@ function saveHabitFromForm(event) {
     name,
     schedule: elements.habitSchedule.value,
     color: new FormData(elements.habitForm).get("habit-color"),
+    notes: elements.habitNotes.value.trim(),
   };
 
   if (existingHabit) {
@@ -295,6 +298,7 @@ function normalizeImportedHabits(habits) {
       color,
       createdAt: /^\d{4}-\d{2}-\d{2}$/.test(habit.createdAt ?? "") ? habit.createdAt : toDateKey(new Date()),
       history,
+      notes: typeof habit.notes === "string" ? habit.notes.trim().slice(0, 160) : "",
     };
   });
 }
@@ -308,7 +312,7 @@ function render() {
     if (state.filter === "pending") return !complete;
     if (state.filter === "done") return complete;
     return true;
-  }).filter((habit) => habit.name.toLocaleLowerCase().includes(state.query));
+  }).filter((habit) => `${habit.name} ${habit.notes ?? ""}`.toLocaleLowerCase().includes(state.query));
   const visibleHabits = sortHabits(matchingHabits);
 
   elements.habitList.innerHTML = visibleHabits.map((habit) => habitCardTemplate(habit, todayKey)).join("");
@@ -344,6 +348,7 @@ function habitCardTemplate(habit, todayKey) {
           <h3>${escapeHtml(habit.name)}</h3>
           <span class="schedule-badge">${scheduleLabels[habit.schedule]}</span>
         </div>
+        ${habit.notes ? `<p class="habit-note">${escapeHtml(habit.notes)}</p>` : ""}
         <div class="habit-meta">
           <span><strong>${streak}</strong> day streak</span>
           <span><strong>${total}</strong> completions</span>

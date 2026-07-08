@@ -6,6 +6,7 @@ A private, offline-first habit tracker for building consistent daily routines. I
 
 - Create, edit, complete, search, filter, and delete habits
 - Sort today’s habits by newest, name, streak, or total completions
+- Add short notes to capture the purpose behind each routine
 - Daily, weekday, and weekend schedules
 - Current streak and total-completion calculations
 - Seven-day progress chart and weekly consistency score
