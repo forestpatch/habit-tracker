@@ -60,6 +60,7 @@ document.querySelector("#cancel-dialog-button").addEventListener("click", closeH
 document.querySelector("#clear-data-button").addEventListener("click", resetData);
 document.querySelector("#theme-toggle").addEventListener("click", toggleTheme);
 document.querySelector("#export-button").addEventListener("click", exportData);
+document.querySelector("#csv-export-button").addEventListener("click", exportCsv);
 document.querySelector("#import-button").addEventListener("click", () => elements.importInput.click());
 elements.importInput.addEventListener("change", importData);
 
@@ -249,13 +250,39 @@ function exportData() {
     habits: state.habits,
   };
   const blob = new Blob([JSON.stringify(exportPayload, null, 2)], { type: "application/json" });
+  downloadBlob(blob, `habit-garden-${toDateKey(new Date())}.json`);
+  showToast("Habit data exported");
+}
+
+function exportCsv() {
+  const rows = [
+    ["Habit", "Schedule", "Created", "Current streak", "Total completions", "Notes"],
+    ...state.habits.map((habit) => [
+      habit.name,
+      scheduleLabels[habit.schedule],
+      habit.createdAt,
+      calculateStreak(habit),
+      Object.keys(habit.history).length,
+      habit.notes ?? "",
+    ]),
+  ];
+  const csv = rows.map((row) => row.map(csvCell).join(",")).join("\r\n");
+  downloadBlob(new Blob([csv], { type: "text/csv;charset=utf-8" }), `habit-garden-${toDateKey(new Date())}.csv`);
+  showToast("Habit report exported as CSV");
+}
+
+function csvCell(value) {
+  const text = String(value ?? "");
+  return /[",\r\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
+}
+
+function downloadBlob(blob, filename) {
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = `habit-garden-${toDateKey(new Date())}.json`;
+  link.download = filename;
   link.click();
   window.setTimeout(() => URL.revokeObjectURL(url), 0);
-  showToast("Habit data exported");
 }
 
 async function importData(event) {

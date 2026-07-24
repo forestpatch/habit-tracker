@@ -13,6 +13,7 @@ A private, offline-first habit tracker for building consistent daily routines. I
 - Automatic local persistence through `localStorage`
 - Light and dark themes
 - Validated JSON backup import and export
+- CSV reporting for spreadsheet-friendly progress reviews
 - Responsive and keyboard-accessible interface
 
 ## Run locally
