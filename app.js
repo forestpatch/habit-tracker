@@ -136,6 +136,8 @@ function handleHabitAction(event) {
 
   if (actionButton.dataset.action === "toggle") toggleHabit(habit);
   if (actionButton.dataset.action === "edit") openHabitDialog(habit);
+  if (actionButton.dataset.action === "archive") setHabitArchived(habit, true);
+  if (actionButton.dataset.action === "restore") setHabitArchived(habit, false);
   if (actionButton.dataset.action === "delete") deleteHabit(habit);
 }
 
@@ -197,6 +199,7 @@ function saveHabitFromForm(event) {
       ...details,
       createdAt: toDateKey(new Date()),
       history: {},
+      archived: false,
     });
     showToast("New habit added");
   }
@@ -211,6 +214,13 @@ function deleteHabit(habit) {
   state.habits = state.habits.filter((item) => item.id !== habit.id);
   saveHabits();
   showToast("Habit deleted");
+  render();
+}
+
+function setHabitArchived(habit, archived) {
+  habit.archived = archived;
+  saveHabits();
+  showToast(archived ? "Habit archived" : "Habit restored");
   render();
 }
 
@@ -256,11 +266,12 @@ function exportData() {
 
 function exportCsv() {
   const rows = [
-    ["Habit", "Schedule", "Created", "Current streak", "Total completions", "Notes"],
+    ["Habit", "Schedule", "Created", "Status", "Current streak", "Total completions", "Notes"],
     ...state.habits.map((habit) => [
       habit.name,
       scheduleLabels[habit.schedule],
       habit.createdAt,
+      habit.archived ? "Archived" : "Active",
       calculateStreak(habit),
       Object.keys(habit.history).length,
       habit.notes ?? "",
@@ -326,6 +337,7 @@ function normalizeImportedHabits(habits) {
       createdAt: /^\d{4}-\d{2}-\d{2}$/.test(habit.createdAt ?? "") ? habit.createdAt : toDateKey(new Date()),
       history,
       notes: typeof habit.notes === "string" ? habit.notes.trim().slice(0, 160) : "",
+      archived: habit.archived === true,
     };
   });
 }
@@ -333,8 +345,11 @@ function normalizeImportedHabits(habits) {
 function render() {
   const today = new Date();
   const todayKey = toDateKey(today);
-  const scheduledHabits = state.habits.filter((habit) => isScheduled(habit, today));
-  const matchingHabits = scheduledHabits.filter((habit) => {
+  const activeHabits = state.habits.filter((habit) => !habit.archived);
+  const scheduledHabits = activeHabits.filter((habit) => isScheduled(habit, today));
+  const filterSource = state.filter === "archived" ? state.habits.filter((habit) => habit.archived) : scheduledHabits;
+  const matchingHabits = filterSource.filter((habit) => {
+    if (state.filter === "archived") return true;
     const complete = Boolean(habit.history[todayKey]);
     if (state.filter === "pending") return !complete;
     if (state.filter === "done") return complete;
@@ -348,7 +363,7 @@ function render() {
   const completed = scheduledHabits.filter((habit) => habit.history[todayKey]).length;
   elements.completedCount.textContent = completed;
   elements.habitCount.textContent = scheduledHabits.length;
-  elements.bestStreak.textContent = Math.max(0, ...state.habits.map(calculateStreak));
+  elements.bestStreak.textContent = Math.max(0, ...activeHabits.map(calculateStreak));
 
   renderWeeklyProgress();
 }
@@ -364,12 +379,15 @@ function sortHabits(habits) {
 }
 
 function habitCardTemplate(habit, todayKey) {
-  const complete = Boolean(habit.history[todayKey]);
+  const archived = habit.archived === true;
+  const complete = !archived && Boolean(habit.history[todayKey]);
   const streak = calculateStreak(habit);
   const total = Object.keys(habit.history).length;
   return `
-    <article class="habit-card ${complete ? "completed" : ""}" style="--habit-color: ${colorMap[habit.color]}">
-      <button class="complete-button" data-action="toggle" data-id="${habit.id}" type="button" aria-label="${complete ? "Mark incomplete" : "Mark complete"}: ${escapeHtml(habit.name)}">✓</button>
+    <article class="habit-card ${complete ? "completed" : ""} ${archived ? "archived" : ""}" style="--habit-color: ${colorMap[habit.color]}">
+      ${archived
+        ? '<span class="archive-indicator" aria-hidden="true">↺</span>'
+        : `<button class="complete-button" data-action="toggle" data-id="${habit.id}" type="button" aria-label="${complete ? "Mark incomplete" : "Mark complete"}: ${escapeHtml(habit.name)}">✓</button>`}
       <div class="habit-main">
         <div class="habit-title-row">
           <h3>${escapeHtml(habit.name)}</h3>
@@ -384,7 +402,10 @@ function habitCardTemplate(habit, todayKey) {
       <details class="habit-menu">
         <summary class="more-button" aria-label="Options for ${escapeHtml(habit.name)}">•••</summary>
         <div class="menu-popover">
-          <button data-action="edit" data-id="${habit.id}" type="button">Edit</button>
+          ${archived
+            ? `<button data-action="restore" data-id="${habit.id}" type="button">Restore</button>`
+            : `<button data-action="edit" data-id="${habit.id}" type="button">Edit</button>
+               <button data-action="archive" data-id="${habit.id}" type="button">Archive</button>`}
           <button class="danger-action" data-action="delete" data-id="${habit.id}" type="button">Delete</button>
         </div>
       </details>
@@ -397,15 +418,15 @@ function renderWeeklyProgress() {
   const today = toDateKey(new Date());
   const elapsedWeekDates = weekDates.filter((date) => toDateKey(date) <= today);
   const dayRates = weekDates.map((date) => {
-    const scheduled = state.habits.filter((habit) => isScheduled(habit, date));
+    const scheduled = state.habits.filter((habit) => !habit.archived && isScheduled(habit, date));
     const complete = scheduled.filter((habit) => habit.history[toDateKey(date)]).length;
     return scheduled.length ? Math.round((complete / scheduled.length) * 100) : 0;
   });
 
-  const opportunities = elapsedWeekDates.reduce((total, date) => total + state.habits.filter((habit) => isScheduled(habit, date)).length, 0);
+  const opportunities = elapsedWeekDates.reduce((total, date) => total + state.habits.filter((habit) => !habit.archived && isScheduled(habit, date)).length, 0);
   const completions = elapsedWeekDates.reduce((total, date) => {
     const dateKey = toDateKey(date);
-    return total + state.habits.filter((habit) => isScheduled(habit, date) && habit.history[dateKey]).length;
+    return total + state.habits.filter((habit) => !habit.archived && isScheduled(habit, date) && habit.history[dateKey]).length;
   }, 0);
   const rate = opportunities ? Math.round((completions / opportunities) * 100) : 0;
 

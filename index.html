@@ -63,31 +63,33 @@
                 <p class="eyebrow">Your routines</p>
                 <h2>Today’s habits</h2>
               </div>
-              <div class="panel-actions">
-                <label class="search-field">
-                  <span class="sr-only">Search habits</span>
-                  <input id="habit-search" type="search" placeholder="Search habits" autocomplete="off" />
-                </label>
-                <label class="sort-field">
-                  <span class="sr-only">Sort habits</span>
-                  <select id="habit-sort">
-                    <option value="created">Newest</option>
-                    <option value="name">Name</option>
-                    <option value="streak">Streak</option>
-                    <option value="total">Completions</option>
-                  </select>
-                </label>
-                <div class="filter-group" role="group" aria-label="Filter habits">
-                  <button class="filter-button active" type="button" data-filter="all">All</button>
-                  <button class="filter-button" type="button" data-filter="pending">Pending</button>
-                  <button class="filter-button" type="button" data-filter="done">Done</button>
-                </div>
-                <div class="data-actions">
-                  <button class="secondary-button" id="import-button" type="button">Import</button>
-                  <button class="secondary-button" id="export-button" type="button">Export</button>
-                  <button class="secondary-button" id="csv-export-button" type="button">CSV</button>
-                  <input id="import-input" type="file" accept="application/json,.json" hidden />
-                </div>
+              <div class="data-actions">
+                <button class="secondary-button" id="import-button" type="button">Import</button>
+                <button class="secondary-button" id="export-button" type="button">Export</button>
+                <button class="secondary-button" id="csv-export-button" type="button">CSV</button>
+                <input id="import-input" type="file" accept="application/json,.json" hidden />
+              </div>
+            </div>
+
+            <div class="habit-controls">
+              <label class="search-field">
+                <span class="sr-only">Search habits</span>
+                <input id="habit-search" type="search" placeholder="Search habits" autocomplete="off" />
+              </label>
+              <label class="sort-field">
+                <span class="sr-only">Sort habits</span>
+                <select id="habit-sort">
+                  <option value="created">Newest</option>
+                  <option value="name">Name</option>
+                  <option value="streak">Streak</option>
+                  <option value="total">Completions</option>
+                </select>
+              </label>
+              <div class="filter-group" role="group" aria-label="Filter habits">
+                <button class="filter-button active" type="button" data-filter="all">All</button>
+                <button class="filter-button" type="button" data-filter="pending">Pending</button>
+                <button class="filter-button" type="button" data-filter="done">Done</button>
+                <button class="filter-button" type="button" data-filter="archived">Archived</button>
               </div>
             </div>
 
